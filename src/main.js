@@ -273,7 +273,7 @@ function refreshProps() {
     const text = state.layers.find((l) => l.type === 'text');
     if (text) selectedId = text.id;
   }
-  renderProps(propsContentEl, selectedId, { onChange: refreshCanvas, onRemove: refreshAll });
+  renderProps(propsContentEl, selectedId, { onChange: refreshCanvas, onRemove: refreshAll, onBrandChange: changeBrand });
 }
 
 function refreshLayers() {
@@ -529,7 +529,7 @@ async function openCommunitySticker(item) {
 // ya relleno con el texto, listo para darle estilo y descargar.
 function openCommunityText(text) {
   home.hide();
-  applyAdHocDoc(buildTextBodyDoc(text));
+  applyAdHocDoc(buildTextBodyDoc(text, { community: true }));
 }
 
 // En los generadores rápidos (stickers, logos) el botón principal descarga

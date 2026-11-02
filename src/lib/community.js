@@ -30,15 +30,18 @@ export function publicImageUrl(path) {
 }
 
 // Lista de stickers visibles, más recientes primero; si se pide una etiqueta,
-// filtra por ella. Sin red, devuelve la última lista conocida (cache local).
-export async function fetchCommunityStickers(tag) {
-  const filter = tag ? `&tags=cs.{${encodeURIComponent(tag)}}` : '';
+// filtra por ella. Si se pide una marca y no "todas", solo salen los suyos y
+// los que valen para cualquier marca (brand=null). Sin red, devuelve la
+// última lista conocida (cache local).
+export async function fetchCommunityStickers(tag, brand, allBrands) {
+  const tagFilter = tag ? `&tags=cs.{${encodeURIComponent(tag)}}` : '';
+  const brandFilter = brand && !allBrands ? `&or=(brand.eq.${encodeURIComponent(brand)},brand.is.null)` : '';
   try {
-    const rows = await getJSON(`${REST}/community_items?type=eq.sticker&status=eq.visible&order=created_at.desc${filter}`);
-    if (!tag) writeCache({ stickers: rows });
+    const rows = await getJSON(`${REST}/community_items?type=eq.sticker&status=eq.visible&order=created_at.desc${tagFilter}${brandFilter}`);
+    if (!tag && !brandFilter) writeCache({ stickers: rows });
     return rows;
   } catch {
-    return (readCache().stickers || []).filter((r) => !tag || (r.tags || []).includes(tag));
+    return (readCache().stickers || []).filter((r) => (!tag || (r.tags || []).includes(tag)) && (allBrands || !brand || !r.brand || r.brand === brand));
   }
 }
 
@@ -68,7 +71,7 @@ function newFileName() {
   return `${id}.png`;
 }
 
-export async function submitSticker(file, name, tags = []) {
+export async function submitSticker(file, name, tags = [], brand) {
   const path = newFileName();
   const up = await fetch(`${STORAGE}/object/community/${path}`, {
     method: 'POST',
@@ -77,7 +80,7 @@ export async function submitSticker(file, name, tags = []) {
   });
   if (!up.ok) throw new Error('No se pudo subir la imagen');
 
-  const row = { type: 'sticker', name: name || null, image_path: path, brand_recolor: true, tags, status: 'visible' };
+  const row = { type: 'sticker', name: name || null, image_path: path, brand_recolor: true, tags, brand: brand || null, status: 'visible' };
   const ins = await fetch(`${REST}/community_items`, {
     method: 'POST',
     headers: { ...HEADERS, 'Content-Type': 'application/json', Prefer: 'return=minimal' },

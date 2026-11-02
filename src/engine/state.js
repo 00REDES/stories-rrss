@@ -102,6 +102,7 @@ export function loadDocument(doc) {
     templateName: doc.templateName || null,
     quickGenerator: doc.quickGenerator || null,
     templateVersion: doc.templateVersion || 1,
+    community: doc.community || false,
   });
   notify();
 }
@@ -113,6 +114,7 @@ export function serializeDocument() {
     templateName: state.templateName,
     quickGenerator: state.quickGenerator || null,
     templateVersion: state.templateVersion || 1,
+    community: state.community || false,
   });
 }
 

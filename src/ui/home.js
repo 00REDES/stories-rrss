@@ -165,6 +165,7 @@ export function initHome({ root, getBrand, onBrand, onOpen, onCommunitySticker, 
       inner.appendChild(content);
       renderCommunitySection(content, {
         kind: communityNode.community,
+        brand,
         onPickSticker: (item) => onCommunitySticker(item),
         onPickText: (text) => onCommunityText(text),
       });

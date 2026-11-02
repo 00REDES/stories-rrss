@@ -40,14 +40,15 @@ function renderTexts(container, { onPick }) {
   });
 }
 
-function renderStickers(container, { onPick }) {
+function renderStickers(container, { onPick, brand }) {
   let activeTag = null;
+  let showAll = false;
   let view = 'grid';
   let stickers = [];
   let tags = [];
 
   async function load() {
-    [stickers, tags] = await Promise.all([fetchCommunityStickers(activeTag), fetchTags()]);
+    [stickers, tags] = await Promise.all([fetchCommunityStickers(activeTag, brand, showAll), fetchTags()]);
     paint();
   }
 
@@ -109,7 +110,7 @@ function renderStickers(container, { onPick }) {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Publicando…';
       try {
-        await submitSticker(file, nameInput.value.trim(), [...selected]);
+        await submitSticker(file, nameInput.value.trim(), [...selected], brand);
         alert('Publicado, ya lo puede ver todo el mundo.');
         view = 'grid';
         await load();
@@ -145,6 +146,14 @@ function renderStickers(container, { onPick }) {
     container.appendChild(upBtn);
 
     if (view === 'upload') { container.appendChild(buildUploadForm()); return; }
+
+    const allToggle = document.createElement('button');
+    allToggle.type = 'button';
+    allToggle.className = 'btn small' + (showAll ? ' active' : '');
+    allToggle.style.cssText = 'width:100%;margin-bottom:10px';
+    allToggle.textContent = showAll ? 'Mostrando todas las marcas' : 'Mostrar todos (otras marcas también)';
+    allToggle.addEventListener('click', () => { showAll = !showAll; load(); });
+    container.appendChild(allToggle);
 
     if (tags.length) {
       const chips = el('div', 'toggle-row wrap');
@@ -198,7 +207,7 @@ function renderStickers(container, { onPick }) {
 }
 
 // kind: 'stickers' | 'texts'
-export function renderCommunitySection(container, { kind, onPickSticker, onPickText }) {
+export function renderCommunitySection(container, { kind, onPickSticker, onPickText, brand }) {
   if (kind === 'texts') renderTexts(container, { onPick: onPickText });
-  else renderStickers(container, { onPick: onPickSticker });
+  else renderStickers(container, { onPick: onPickSticker, brand });
 }

@@ -33,3 +33,9 @@ fila y, si procede, el archivo del Storage).
   fácilmente ese tope, y no hay paso de conversión/reducción en el cliente (decisión del usuario, 2026-11-02).
   Los borrados de Storage no se pueden hacer por SQL (`protect_delete()` lo impide): se borran desde
   Storage → Files en el panel, no con `delete from storage.objects`.
+- Columna `brand` en `community_items` (texto, nullable): al subir un sticker se guarda ahí la marca activa
+  (`cjs`/`oes`/`ajt`), porque cada marca usa tipografías distintas y un sticker pensado para una no siempre
+  cuadra en otra. Por defecto la galería solo muestra los de tu marca + los que no tienen marca (`brand IS
+  NULL`, "valen para todas"); el botón "Mostrar todos" en `communityPanel.js` quita ese filtro. No hay forma
+  de marcar un sticker como "vale para todas" al subirlo (se decidió no complicar el formulario); si hace
+  falta, se cambia a mano en Supabase poniendo `brand = NULL` en esa fila.

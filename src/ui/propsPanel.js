@@ -1,7 +1,7 @@
 import { getLayer, updateLayer, removeLayer, getState } from '../engine/state.js';
 import { ARTICLE_SUBTITLE_GAP } from '../templates/builtins.js';
 import { COLORS, ASPECT_PRESETS, CANVAS_W, CANVAS_H, FONT_WIDTH_VARIANTS, FONT_WEIGHT_VARIANTS } from '../engine/constants.js';
-import { currentFontSet, brandColors } from '../engine/fontSets.js';
+import { currentFontSet, brandColors, FONT_SETS, getFontSetKey } from '../engine/fontSets.js';
 import { recolorThumb } from '../lib/recolor.js';
 import { submitText } from '../lib/community.js';
 import { swatches } from './swatches.js';
@@ -240,7 +240,7 @@ export function renderAjtLogoPanel(container, { logo, onChange, onDownload, onDo
   container.appendChild(g);
 }
 
-export function renderProps(container, layerId, { onChange, onRemove } = {}) {
+export function renderProps(container, layerId, { onChange, onRemove, onBrandChange } = {}) {
   container.innerHTML = '';
   if (!layerId) {
     const p = document.createElement('p');
@@ -419,6 +419,26 @@ export function renderProps(container, layerId, { onChange, onRemove } = {}) {
       }
     });
     g.appendChild(addCommunityBtn);
+
+    // Texto de la comunidad: se puede abrir con cualquier marca y aquí se
+    // elige con qué tipografía se dibuja (puede no ser con la que se creó).
+    if (getState().community && onBrandChange) {
+      const brandHint = document.createElement('p');
+      brandHint.className = 'hint';
+      brandHint.textContent = 'Tipografía: con qué marca se dibuja este texto.';
+      g.appendChild(brandHint);
+      const brandRow = document.createElement('div');
+      brandRow.className = 'toggle-row';
+      Object.values(FONT_SETS).forEach((set) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = set.label;
+        if (set.key === getFontSetKey()) b.classList.add('active');
+        b.addEventListener('click', () => onBrandChange(set.key));
+        brandRow.appendChild(b);
+      });
+      g.appendChild(brandRow);
+    }
 
     // Artículo: interruptor del subtítulo, visible tanto desde el título
     // principal como desde el propio subtítulo

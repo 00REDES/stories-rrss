@@ -204,12 +204,13 @@ export function defaultBodyStickerBox() {
   return { canvasW: 1200, canvasH: 500, x: 60, y: 60, width: 1080, height: 380 };
 }
 
-export function buildTextBodyDoc(textRaw = 'Escribe aquí tu texto largo. Puedes usar varias líneas y **negrita parcial**.', { color = COLORS.white } = {}) {
+export function buildTextBodyDoc(textRaw = 'Escribe aquí tu texto largo. Puedes usar varias líneas y **negrita parcial**.', { color = COLORS.white, community = false } = {}) {
   const box = defaultBodyStickerBox();
   return {
     canvas: { width: box.canvasW, height: box.canvasH },
     templateName: 'Sticker de cuerpo',
     quickGenerator: 'body',
+    community,
     layers: [
       makeTextLayer({
         name: 'Texto', role: 'body', locked: false, autoFit: true,
