@@ -53,18 +53,29 @@ export const GALLERIES = {
   },
 };
 
+// Items de la comunidad: no viven en GALLERIES (fijo, en el código) sino que
+// llegan por red; se registran aquí en tiempo de ejecución para poder
+// reutilizar el mismo pipeline de galería (recoloreado, panel, descarga).
+const communityRuntime = new Map();
+export function registerCommunityItem(item) {
+  communityRuntime.set(item.key, item);
+}
+
 export function galleryItem(galleryKey, itemKey) {
+  if (galleryKey === 'community') return communityRuntime.get(itemKey) || null;
   const g = GALLERIES[galleryKey];
   if (!g) return null;
   return g.items.find((i) => i.key === itemKey) || g.items[0];
 }
 
 export function buildGalleryDoc(galleryKey, itemKey) {
+  const item = galleryItem(galleryKey, itemKey);
+  if (!item) return null;
   const g = GALLERIES[galleryKey];
-  const item = g.items.find((i) => i.key === itemKey) || g.items[0];
+  const title = g ? g.title : item.label;
   return {
     canvas: { width: item.width, height: item.height },
-    templateName: g.items.length > 1 && itemKey ? `${g.title} · ${item.label}` : `Sticker · ${g.title}`,
+    templateName: g && g.items.length > 1 && itemKey ? `${title} · ${item.label}` : `Sticker · ${title}`,
     quickGenerator: 'gallery',
     gallery: galleryKey,
     layers: [

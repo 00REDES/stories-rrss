@@ -3,6 +3,7 @@ import { logoSrcFor } from '../engine/stageRenderer.js';
 import { ensureFonts } from '../engine/fonts.js';
 import { isMuted, setMuted } from '../lib/sound.js';
 import { icon } from './icons.js';
+import { renderCommunitySection } from './communityPanel.js';
 
 // Menú de inicio, de arriba abajo:
 //   1. Marca (CJS · OES · AJT)
@@ -53,9 +54,16 @@ const MENU = [
       },
     ],
   },
+  {
+    title: 'Comunidad', hint: 'Stickers y textos de los comités', icon: 'layers',
+    children: [
+      { title: 'Stickers de la comunidad', hint: 'Sube el tuyo o usa uno de otro comité', icon: 'star', community: 'stickers' },
+      { title: 'Textos guardados', hint: 'Consignas y convocatorias para reutilizar', icon: 'text', community: 'texts' },
+    ],
+  },
 ];
 
-export function initHome({ root, getBrand, onBrand, onOpen }) {
+export function initHome({ root, getBrand, onBrand, onOpen, onCommunitySticker, onCommunityText }) {
   let path = []; // índices elegidos en cada nivel
   let openedFrom = []; // nivel del menú desde el que se abrió la plantilla en curso
 
@@ -66,8 +74,10 @@ export function initHome({ root, getBrand, onBrand, onOpen }) {
     const crumbs = [];
     for (const i of path) {
       const node = items[i];
-      if (!node || !node.children) break;
+      if (!node) break;
       crumbs.push(node);
+      if (node.community) return { items: [], crumbs, communityNode: node };
+      if (!node.children) break;
       items = resolve(node, brand);
     }
     return { items, crumbs };
@@ -76,12 +86,13 @@ export function initHome({ root, getBrand, onBrand, onOpen }) {
   function row(node, index) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'menu-row' + (node.children ? '' : ' leaf');
-    b.innerHTML = `<span class="menu-ic">${icon(node.icon, 26)}</span><span class="menu-text"><strong></strong><small></small></span><span class="menu-go">${icon(node.children ? 'chevron' : 'plus', 20)}</span>`;
+    const opensLevel = node.children || node.community;
+    b.className = 'menu-row' + (opensLevel ? '' : ' leaf');
+    b.innerHTML = `<span class="menu-ic">${icon(node.icon, 26)}</span><span class="menu-text"><strong></strong><small></small></span><span class="menu-go">${icon(opensLevel ? 'chevron' : 'plus', 20)}</span>`;
     b.querySelector('strong').textContent = node.title;
     b.querySelector('small').textContent = node.hint;
     b.addEventListener('click', () => {
-      if (node.children) { path.push(index); render(); } else { openedFrom = path.slice(); onOpen(node.id); }
+      if (opensLevel) { path.push(index); render(); } else { openedFrom = path.slice(); onOpen(node.id); }
     });
     return b;
   }
@@ -131,7 +142,7 @@ export function initHome({ root, getBrand, onBrand, onOpen }) {
     });
     inner.appendChild(brands);
 
-    const { items, crumbs } = currentLevel(brand);
+    const { items, crumbs, communityNode } = currentLevel(brand);
     const head = document.createElement('div');
     head.className = 'home-head';
     if (crumbs.length) {
@@ -148,10 +159,21 @@ export function initHome({ root, getBrand, onBrand, onOpen }) {
     head.appendChild(h);
     inner.appendChild(head);
 
-    const list = document.createElement('div');
-    list.className = 'menu-list';
-    items.forEach((node, i) => list.appendChild(row(node, i)));
-    inner.appendChild(list);
+    if (communityNode) {
+      const content = document.createElement('div');
+      content.className = 'community-content';
+      inner.appendChild(content);
+      renderCommunitySection(content, {
+        kind: communityNode.community,
+        onPickSticker: (item) => onCommunitySticker(item),
+        onPickText: (text) => onCommunityText(text),
+      });
+    } else {
+      const list = document.createElement('div');
+      list.className = 'menu-list';
+      items.forEach((node, i) => list.appendChild(row(node, i)));
+      inner.appendChild(list);
+    }
 
     root.appendChild(inner);
   }

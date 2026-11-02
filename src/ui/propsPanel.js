@@ -3,6 +3,7 @@ import { ARTICLE_SUBTITLE_GAP } from '../templates/builtins.js';
 import { COLORS, ASPECT_PRESETS, CANVAS_W, CANVAS_H, FONT_WIDTH_VARIANTS, FONT_WEIGHT_VARIANTS } from '../engine/constants.js';
 import { currentFontSet, brandColors } from '../engine/fontSets.js';
 import { recolorThumb } from '../lib/recolor.js';
+import { submitText } from '../lib/community.js';
 import { swatches } from './swatches.js';
 import { icon } from './icons.js';
 import { AJT_LOGO_VARIANTS, AJT_LOGO_LAYOUTS, ajtColor } from '../templates/ajtLogo.js';
@@ -397,6 +398,27 @@ export function renderProps(container, layerId, { onChange, onRemove } = {}) {
     if (layer.role !== 'title') textarea.rows = 6;
     textarea.addEventListener('input', () => patch({ text: textarea.value }));
     g.appendChild(row('Contenido', textarea));
+
+    const addCommunityBtn = document.createElement('button');
+    addCommunityBtn.type = 'button';
+    addCommunityBtn.className = 'btn small';
+    addCommunityBtn.style.cssText = 'width:100%;margin-bottom:10px';
+    addCommunityBtn.textContent = 'Añadir a la comunidad';
+    addCommunityBtn.addEventListener('click', async () => {
+      const current = getLayer(layerId);
+      if (!current || !current.text || !current.text.trim()) return;
+      addCommunityBtn.disabled = true;
+      try {
+        await submitText(current.text);
+        alert('Añadido a la comunidad: ya lo puede usar todo el mundo.');
+      } catch (err) {
+        console.error('Error añadiendo texto a la comunidad', err);
+        alert('No se ha podido añadir. Comprueba tu conexión e inténtalo de nuevo.');
+      } finally {
+        addCommunityBtn.disabled = false;
+      }
+    });
+    g.appendChild(addCommunityBtn);
 
     // Artículo: interruptor del subtítulo, visible tanto desde el título
     // principal como desde el propio subtítulo

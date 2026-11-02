@@ -1,5 +1,5 @@
 import { getState, loadDocument, addLayer, undo, redo, updateLayer, serializeDocument, setCanvasSize, subscribe } from './engine/state.js';
-import { computeTextTitleGeometry, computeLocationGeometry, computePhotoBadgeGeometry, pinAssetForColor } from './templates/locationGenerator.js';
+import { computeTextTitleGeometry, computeLocationGeometry, computePhotoBadgeGeometry, pinAssetForColor, buildTextBodyDoc } from './templates/locationGenerator.js';
 import { StageRenderer, exportPNG, exportLayersSeparately } from './engine/stageRenderer.js';
 import { makeTextLayer, makeImageLayer, makeLogoLayer, makePinLayer, makeFrameLayer, makeBackgroundLayer } from './engine/layerFactory.js';
 import { listTemplates, loadTemplateDoc, saveAsNewTemplate, deleteTemplate } from './templates/store.js';
@@ -10,8 +10,9 @@ import { paintIcons, icon } from './ui/icons.js';
 import { initUiSounds } from './lib/sound.js';
 import { renderComposePanel } from './ui/composePanel.js';
 import { drawAjtLogo, ensureAjtLogoAssets, ajtVariant, ajtColor } from './templates/ajtLogo.js';
-import { GALLERIES, galleryItem, galleryFileName, galleryColorFileName } from './templates/gallery.js';
-import { recolorBlob } from './lib/recolor.js';
+import { GALLERIES, galleryItem, buildGalleryDoc, registerCommunityItem, galleryFileName, galleryColorFileName } from './templates/gallery.js';
+import { recolorBlob, loadImg } from './lib/recolor.js';
+import { publicImageUrl } from './lib/community.js';
 import { dataURLToBlob, dataURLToUint8Array, downloadBlob } from './lib/download.js';
 import { createZip } from './lib/zip.js';
 import { layoutRichText, bodyWeights } from './engine/richText.js';
@@ -230,8 +231,11 @@ function refreshProps() {
   const state = getState();
   if (state.quickGenerator === 'gallery') {
     const img = state.layers.find((l) => l.type === 'image');
-    const gallery = img && GALLERIES[img.galleryKey];
-    if (!gallery) return;
+    if (!img) return;
+    const gallery = img.galleryKey === 'community'
+      ? { title: (galleryItem('community', img.itemKey) || {}).label || 'Comunidad', items: [galleryItem('community', img.itemKey)].filter(Boolean) }
+      : GALLERIES[img.galleryKey];
+    if (!gallery || !gallery.items.length) return;
     renderGalleryPanel(propsContentEl, {
       gallery,
       currentKey: img.itemKey,
@@ -488,6 +492,46 @@ async function applyTemplate(id, { fresh = false } = {}) {
   if (doc.quickGenerator) { openSheet(); switchTab('props'); }
 }
 
+// Abre un documento que no viene de una plantilla guardada (sticker/texto de
+// la comunidad): mismo camino que applyTemplate, pero sin id de espacio de
+// trabajo propio (currentTemplateId = null, así saveCurrentWorkspace() no
+// intenta guardarlo bajo ningún id).
+async function applyAdHocDoc(doc) {
+  currentTemplateId = null;
+  templateNameLabel.textContent = doc.templateName || 'Comunidad';
+  loadDocument(doc);
+  bottomSheet.classList.toggle('quick-mode', !!doc.quickGenerator);
+  updateExportButton();
+  await refreshAll();
+  fitStage();
+  if (doc.quickGenerator) { openSheet(); switchTab('props'); }
+}
+
+// Sticker de la comunidad: se registra con su tamaño real (hace falta para
+// el lienzo) y se abre con el mismo panel/descarga que los stickers oficiales.
+async function openCommunitySticker(item) {
+  const src = publicImageUrl(item.image_path);
+  try {
+    const img = await loadImg(src);
+    registerCommunityItem({
+      key: item.id, label: item.name || 'Sticker de la comunidad', src,
+      width: img.naturalWidth, height: img.naturalHeight, recolor: item.brand_recolor !== false,
+    });
+    home.hide();
+    await applyAdHocDoc(buildGalleryDoc('community', item.id));
+  } catch (err) {
+    console.error('Error abriendo sticker de comunidad', err);
+    alert('No se ha podido cargar este sticker.');
+  }
+}
+
+// Texto guardado de la comunidad: se abre como un sticker de cuerpo editable,
+// ya relleno con el texto, listo para darle estilo y descargar.
+function openCommunityText(text) {
+  home.hide();
+  applyAdHocDoc(buildTextBodyDoc(text));
+}
+
 // En los generadores rápidos (stickers, logos) el botón principal descarga
 // directamente: un toque, sin menú. En las stories mantiene el menú Exportar.
 function updateExportButton() {
@@ -643,6 +687,8 @@ async function init() {
     onBrand: changeBrand,
     onOpen: async (id) => { home.hide(); await applyTemplate(id); },
     onOpenAll: () => { home.hide(); openDrawer(); },
+    onCommunitySticker: (item) => openCommunitySticker(item),
+    onCommunityText: (text) => openCommunityText(text),
     getLast: () => {
       try {
         const id = localStorage.getItem(LAST_TEMPLATE_KEY);
