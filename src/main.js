@@ -573,7 +573,7 @@ async function openCommunitySticker(item) {
     const img = await loadImg(src);
     registerCommunityItem({
       key: item.id, label: item.name || 'Sticker de la comunidad', src,
-      width: img.naturalWidth, height: img.naturalHeight, recolor: item.brand_recolor !== false,
+      width: img.naturalWidth, height: img.naturalHeight, recolor: item.brand_recolor !== false, noPad: item.type === 'fondo',
     });
     home.hide();
     await applyAdHocDoc(buildGalleryDoc('community', item.id));

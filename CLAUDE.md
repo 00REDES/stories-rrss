@@ -54,3 +54,14 @@ fila y, si procede, el archivo del Storage).
   en un lienzo cuadrado (lado máximo 4000 px por el límite de canvas de iOS). Regla del usuario: todo lo que se
   descarga con transparencia es un sticker (logos incluidos). Solo el fondo vertical, que es opaco, lleva
   `noPad: true` en `gallery.js` y se descarga tal cual.
+
+## Fondos de la comunidad
+
+Inicio → «Fondos»: el degradado de legibilidad va SIEMPRE el primero (orden pedido por el usuario), después
+«Fondos de la comunidad» (lista) y «Subir un fondo» (abre directamente el formulario). También está en
+Comunidad → «Fondos de la comunidad». Código: `renderBackgrounds` en `communityPanel.js`, `fetchCommunityBackgrounds` /
+`submitBackground` en `community.js`. Se guardan en `community_items` con `type = 'fondo'` (`brand_recolor = false`,
+sin marca ni etiquetas) y en el mismo bucket `community`. Se abren con el visor de galería y se descargan tal cual
+(`noPad: true`, no son stickers). **Pendiente de comprobar en Supabase**: si `type` tiene una restricción (CHECK)
+que solo admite `sticker`/`texto`, hay que añadir `fondo`; la subida no se probó para no publicar nada de prueba.
+

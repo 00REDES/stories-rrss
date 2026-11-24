@@ -58,12 +58,15 @@ const MENU = [
     title: 'Fondos', hint: 'Degradados y fondos para tus stories', icon: 'layers',
     children: [
       { title: 'Degradado de legibilidad', hint: 'Negro a transparente 9:16, para leer mejor lo que pones encima', icon: 'layers', id: 'gradient_legibility' },
+      { title: 'Fondos de la comunidad', hint: 'Fondos que han subido otros comités', icon: 'photo', community: 'backgrounds' },
+      { title: 'Subir un fondo', hint: 'Comparte el tuyo con todos los comités', icon: 'upload', community: 'backgroundsUpload' },
     ],
   },
   {
     title: 'Comunidad', hint: 'Stickers y textos de los comités', icon: 'layers',
     children: [
       { title: 'Stickers de la comunidad', hint: 'Sube el tuyo o usa uno de otro comité', icon: 'star', community: 'stickers' },
+      { title: 'Fondos de la comunidad', hint: 'Sube el tuyo o usa uno de otro comité', icon: 'photo', community: 'backgrounds' },
       { title: 'Textos guardados', hint: 'Consignas y convocatorias para reutilizar', icon: 'text', community: 'texts' },
     ],
   },

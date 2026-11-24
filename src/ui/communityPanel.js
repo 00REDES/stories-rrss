@@ -1,4 +1,4 @@
-import { fetchCommunityStickers, fetchCommunityTexts, fetchTags, submitSticker, publicImageUrl } from '../lib/community.js';
+import { fetchCommunityStickers, fetchCommunityTexts, fetchCommunityBackgrounds, fetchTags, submitSticker, submitBackground, publicImageUrl } from '../lib/community.js';
 import { recolorThumb } from '../lib/recolor.js';
 import { brandColors } from '../engine/fontSets.js';
 import { icon } from './icons.js';
@@ -206,8 +206,106 @@ function renderStickers(container, { onPick, brand }) {
   load().catch(() => { container.innerHTML = ''; container.appendChild(el('p', 'hint', 'No se ha podido cargar la lista. Comprueba tu conexión.')); });
 }
 
-// kind: 'stickers' | 'texts'
+// Fondos de la comunidad: lista + formulario para subir el tuyo (sin marcas ni
+// etiquetas). startView 'upload' abre directamente el formulario.
+function renderBackgrounds(container, { onPick, startView = 'grid' }) {
+  let view = startView;
+  let items = [];
+
+  async function load() {
+    items = await fetchCommunityBackgrounds();
+    paint();
+  }
+
+  function buildUploadForm() {
+    const g = el('div', 'prop-group');
+    g.appendChild(el('p', 'hint', 'Sube una imagen de fondo para las stories (PNG, JPG o WebP; lo ideal es 9:16, 1080×1920). Se publica al momento y la podrá usar cualquier comité.'));
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/png,image/jpeg,image/webp';
+    g.appendChild(fileInput);
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = 'Nombre (opcional)';
+    nameInput.style.cssText = 'width:100%;margin-top:10px';
+    g.appendChild(nameInput);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'button';
+    submitBtn.className = 'btn';
+    submitBtn.style.cssText = 'width:100%;margin-top:14px';
+    submitBtn.textContent = 'Publicar';
+    submitBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) { alert('Elige una imagen.'); return; }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Publicando…';
+      try {
+        await submitBackground(file, nameInput.value.trim());
+        alert('Publicado, ya lo puede ver todo el mundo.');
+        view = 'grid';
+        await load();
+      } catch (err) {
+        console.error('Error publicando fondo de comunidad', err);
+        alert('No se ha podido publicar. Comprueba tu conexión e inténtalo de nuevo.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Publicar';
+      }
+    });
+    g.appendChild(submitBtn);
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn small';
+    cancel.style.cssText = 'width:100%;margin-top:8px';
+    cancel.textContent = 'Cancelar';
+    cancel.addEventListener('click', () => { view = 'grid'; paint(); });
+    g.appendChild(cancel);
+    return g;
+  }
+
+  function paint() {
+    container.innerHTML = '';
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'btn';
+    upBtn.style.cssText = 'width:100%;margin-bottom:14px';
+    upBtn.innerHTML = `${icon('upload', 20)} Subir un fondo`;
+    upBtn.addEventListener('click', () => { view = 'upload'; paint(); });
+    container.appendChild(upBtn);
+    if (view === 'upload') { container.appendChild(buildUploadForm()); return; }
+
+    if (!items.length) {
+      container.appendChild(el('p', 'hint', 'Todavía no hay fondos. Sube el primero con el botón de arriba.'));
+      return;
+    }
+    const grid = el('div', 'gallery-grid');
+    items.forEach((item) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gallery-item';
+      const img = document.createElement('img');
+      img.src = publicImageUrl(item.image_path);
+      img.alt = item.name || 'Fondo de la comunidad';
+      const label = document.createElement('span');
+      label.textContent = item.name || formatDate(item.created_at);
+      b.appendChild(img);
+      b.appendChild(label);
+      b.addEventListener('click', () => onPick(item));
+      grid.appendChild(b);
+    });
+    container.appendChild(grid);
+  }
+
+  if (view === 'upload') { paint(); load().catch(() => {}); return; } // el formulario no espera a la lista
+  container.innerHTML = '';
+  container.appendChild(el('p', 'hint', 'Cargando…'));
+  load().catch(() => { container.innerHTML = ''; container.appendChild(el('p', 'hint', 'No se ha podido cargar la lista. Comprueba tu conexión.')); });
+}
+
+// kind: 'stickers' | 'texts' | 'backgrounds' | 'backgroundsUpload'
 export function renderCommunitySection(container, { kind, onPickSticker, onPickText, brand }) {
   if (kind === 'texts') renderTexts(container, { onPick: onPickText });
+  else if (kind === 'backgrounds' || kind === 'backgroundsUpload') renderBackgrounds(container, { onPick: onPickSticker, startView: kind === 'backgroundsUpload' ? 'upload' : 'grid' });
   else renderStickers(container, { onPick: onPickSticker, brand });
 }

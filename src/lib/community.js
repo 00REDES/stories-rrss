@@ -55,6 +55,17 @@ export async function fetchCommunityTexts() {
   }
 }
 
+// Fondos subidos por los comités (type = 'fondo'): imágenes que se descargan tal cual
+export async function fetchCommunityBackgrounds() {
+  try {
+    const rows = await getJSON(`${REST}/community_items?type=eq.fondo&status=eq.visible&order=created_at.desc`);
+    writeCache({ backgrounds: rows });
+    return rows;
+  } catch {
+    return readCache().backgrounds || [];
+  }
+}
+
 export async function fetchTags() {
   try {
     const rows = await getJSON(`${REST}/community_tags?select=name&order=name.asc`);
@@ -66,9 +77,9 @@ export async function fetchTags() {
   }
 }
 
-function newFileName() {
+function newFileName(ext = 'png') {
   const id = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`);
-  return `${id}.png`;
+  return `${id}.${ext}`;
 }
 
 export async function submitSticker(file, name, tags = [], brand) {
@@ -105,4 +116,24 @@ export async function submitText(text) {
     body: JSON.stringify(row),
   });
   if (!ins.ok) throw new Error('No se pudo publicar el texto');
+}
+
+const BACKGROUND_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+
+export async function submitBackground(file, name) {
+  const path = newFileName(BACKGROUND_EXT[file.type] || 'png');
+  const up = await fetch(`${STORAGE}/object/community/${path}`, {
+    method: 'POST',
+    headers: { ...HEADERS, 'Content-Type': file.type || 'image/png' },
+    body: file,
+  });
+  if (!up.ok) throw new Error('No se pudo subir la imagen');
+
+  const row = { type: 'fondo', name: name || null, image_path: path, brand_recolor: false, tags: [], brand: null, status: 'visible' };
+  const ins = await fetch(`${REST}/community_items`, {
+    method: 'POST',
+    headers: { ...HEADERS, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify(row),
+  });
+  if (!ins.ok) throw new Error('No se pudo publicar el fondo');
 }
