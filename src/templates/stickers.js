@@ -1,6 +1,7 @@
 import { buildGalleryDoc, GALLERIES } from './gallery.js';
 import { buildAjtLogoDoc } from './ajtLogo.js';
 import { buildComposeDoc } from './compose.js';
+import { buildGradientDoc } from './gradient.js';
 import { buildTextTitleDoc, buildTextBodyDoc, buildTextBodyPillDoc, buildLocationStickerDoc, buildPhotoLocationDoc } from './locationGenerator.js';
 
 // Plantillas de arranque para los generadores rápidos. El contenido real se
@@ -36,4 +37,9 @@ export const LOGO_TEMPLATES = [
   { id: 'logo_ajt', name: 'AJT · logo con ubicación', builtin: true, category: 'Logos', doc: () => buildAjtLogoDoc() },
   { id: 'logo_cjs', name: 'CJS · logotipo', builtin: true, category: 'Logos', doc: () => buildGalleryDoc('logosCjs') },
   { id: 'logo_oes', name: 'OES · logotipo', builtin: true, category: 'Logos', doc: () => buildGalleryDoc('logosOes') },
+];
+
+// Degradado negro → transparente 9:16 (PNG para dar legibilidad a lo que se pone encima)
+export const GRADIENT_TEMPLATES = [
+  { id: 'gradient_legibility', name: 'Degradado de legibilidad', builtin: true, category: 'Fotos', doc: () => buildGradientDoc() },
 ];

@@ -1,5 +1,5 @@
 import { BUILTIN_TEMPLATES } from './builtins.js';
-import { STICKER_TEMPLATES, PHOTO_TEMPLATES, HUELGA_TEMPLATES, LOGO_TEMPLATES } from './stickers.js';
+import { STICKER_TEMPLATES, PHOTO_TEMPLATES, HUELGA_TEMPLATES, LOGO_TEMPLATES, GRADIENT_TEMPLATES } from './stickers.js';
 
 const ALL_BUILTINS = [
   ...BUILTIN_TEMPLATES.map((t) => ({ ...t, category: 'Stories' })),
@@ -7,6 +7,7 @@ const ALL_BUILTINS = [
   ...LOGO_TEMPLATES,
   ...HUELGA_TEMPLATES,
   ...PHOTO_TEMPLATES,
+  ...GRADIENT_TEMPLATES,
 ];
 
 const KEY = 'rrss_stories_templates_v1';

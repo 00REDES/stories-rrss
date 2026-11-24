@@ -2,6 +2,7 @@ import { getState, updateLayer, removeLayer, selectLayer } from '../engine/state
 import { getFontSetKey } from '../engine/fontSets.js';
 import { swatches } from './swatches.js';
 import { icon } from './icons.js';
+import { shadowControls } from './shadowControls.js';
 import { GALLERIES } from '../templates/gallery.js';
 import { AJT_LOGO_VARIANTS, AJT_LOGO_LAYOUTS } from '../templates/ajtLogo.js';
 import {
@@ -50,46 +51,6 @@ function sizeControl(layer, onChange) {
   btns.appendChild(button(icon('plus', 22), 'cp-round', () => step(1.12), 'Más grande'));
   wrap.appendChild(btns);
   return wrap;
-}
-
-// Sombra: interruptor + difuminado, distancia y opacidad (en %). Los cambios se aplican en vivo.
-function shadowControls(layer, onChange, rerender) {
-  const sec = section('Sombra');
-  const cur = () => getState().layers.find((l) => l.id === layer.id) || layer;
-  const top = el('div', 'cp-shadow-head');
-  const sw = el('button', 'cp-switch' + (layer.shadowOn ? ' on' : ''));
-  sw.type = 'button';
-  sw.setAttribute('role', 'switch');
-  sw.setAttribute('aria-checked', String(!!layer.shadowOn));
-  sw.setAttribute('aria-label', 'Sombra');
-  sw.appendChild(el('i'));
-  sw.addEventListener('click', () => { updateLayer(layer.id, { shadowOn: !cur().shadowOn }); onChange(); rerender(); });
-  top.appendChild(el('span', 'cp-shadow-label', layer.shadowOn ? 'Activada' : 'Desactivada'));
-  top.appendChild(sw);
-  sec.appendChild(top);
-  if (layer.shadowOn) {
-    const slider = (label, key, fallback, max) => {
-      const row = el('label', 'cp-slider');
-      const value = Math.round((layer[key] ?? fallback) * (key === 'shadowOpacity' ? 100 : 1));
-      const text = el('span', 'cp-slider-text', `${label} `);
-      const out = el('b', '', `${value}%`);
-      text.appendChild(out);
-      const input = el('input');
-      Object.assign(input, { type: 'range', min: 0, max, step: 1, value });
-      input.addEventListener('input', () => {
-        out.textContent = `${input.value}%`;
-        updateLayer(layer.id, { [key]: key === 'shadowOpacity' ? Number(input.value) / 100 : Number(input.value) });
-        onChange();
-      });
-      row.appendChild(text);
-      row.appendChild(input);
-      return row;
-    };
-    sec.appendChild(slider('Opacidad', 'shadowOpacity', 0.7, 100));
-    sec.appendChild(slider('Difuminado', 'shadowBlurPct', 35, 100));
-    sec.appendChild(slider('Distancia', 'shadowDistPct', 20, 100));
-  }
-  return sec;
 }
 
 function anchorGrid(renderer, layer, onChange) {
@@ -189,7 +150,9 @@ export function renderComposePanel(container, { renderer, onChange, onRefresh, r
     pos.appendChild(row);
     pos.appendChild(el('p', 'cp-hint', 'También puedes arrastrarlo con el dedo, y girarlo o cambiar el tamaño desde las esquinas.'));
     root.appendChild(pos);
-    root.appendChild(shadowControls(selected, onChange, () => setView(container.dataset.cpView || 'main')));
+    const shadow = section('Sombra');
+    shadow.appendChild(shadowControls([selected.id], { onChange, rerender: () => setView(container.dataset.cpView || 'main') }));
+    root.appendChild(shadow);
     return;
   }
 

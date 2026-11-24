@@ -15,6 +15,9 @@ import { recolorBlob, loadImg } from './lib/recolor.js';
 import { publicImageUrl } from './lib/community.js';
 import { dataURLToBlob, dataURLToUint8Array, downloadBlob } from './lib/download.js';
 import { createZip } from './lib/zip.js';
+import { padStickerBlob, padStickerDataURL } from './lib/pad.js';
+import { shadowTargets, shadowExtent } from './engine/shadow.js';
+import { renderGradientPanel } from './ui/gradientPanel.js';
 import { layoutRichText, bodyWeights } from './engine/richText.js';
 import { ensureFonts, ensureFontsFor } from './engine/fonts.js';
 import { FONT_SETS, getFontSetKey, setFontSetKey, getWidthVariant, titleFamily, snapWeight, brandColor, brandHexes, recolorPatch } from './engine/fontSets.js';
@@ -44,30 +47,30 @@ async function waitFonts() {
 // tras cualquier cambio de contenido/estilo se recalcula la geometría entera
 // (tamaño de lienzo incluido) para que el resultado sea siempre una vista
 // previa fiel de lo que se va a exportar, sin que el usuario mueva nada a mano.
-function regenerateQuick() {
+function regenerateQuickCore() {
   const state = getState();
   const mode = state.quickGenerator;
-  if (!mode) return;
+  if (!mode) return false;
 
   if (mode === 'gallery') {
     const img = state.layers.find((l) => l.type === 'image');
     const item = img && galleryItem(img.galleryKey, img.itemKey);
-    if (!item) return;
+    if (!item) return false;
     setCanvasSize(item.width, item.height);
-    updateLayer(img.id, { src: item.src, x: 0, y: 0, width: item.width, height: item.height, fit: 'contain', locked: true, tint: item.recolor ? img.galleryColor || null : null, tintDuotone: !!item.duotone }, { history: false });
-    return;
+    updateLayer(img.id, { src: item.src, x: 0, y: 0, width: item.width, height: item.height, fit: 'contain', locked: true, tint: item.recolor ? img.galleryColor || null : null, tintDuotone: !!item.duotone, ...(item.noPad ? { shadowOn: false } : {}) }, { history: false });
+    return true;
   }
   if (mode === 'logoAjt') {
     const img = state.layers.find((l) => l.type === 'image');
-    if (!img) return;
+    if (!img) return false;
     const logo = drawAjtLogo(img);
     setCanvasSize(logo.width, logo.height);
     updateLayer(img.id, { src: logo.canvas.toDataURL('image/png'), x: 0, y: 0, width: logo.width, height: logo.height, fit: 'contain', locked: true }, { history: false });
-    return;
+    return true;
   }
   if (mode === 'title') {
     const text = state.layers.find((l) => l.type === 'text');
-    if (!text) return;
+    if (!text) return false;
     // modo título: siempre bloqueado y ajustado al contenido (lienzo incluido),
     // recalculado con el ancho/peso/cursiva que tenga la capa en ese momento
     const g = computeTextTitleGeometry(text.text, {
@@ -83,7 +86,7 @@ function regenerateQuick() {
     }, { history: false });
   } else if (mode === 'body') {
     const text = state.layers.find((l) => l.type === 'text');
-    if (!text) return;
+    if (!text) return false;
     // El lienzo se ajusta SIEMPRE al texto: tamaño de letra y ancho de línea
     // los elige el usuario; el texto salta de línea solo (las palabras
     // demasiado largas se parten) y el sticker crece en alto/ancho según lo
@@ -119,7 +122,7 @@ function regenerateQuick() {
   if (mode === 'location') {
     const pin = state.layers.find((l) => l.type === 'pin');
     const text = state.layers.find((l) => l.type === 'text');
-    if (!pin || !text) return;
+    if (!pin || !text) return false;
     const g = computeLocationGeometry(text.text);
     setCanvasSize(g.canvasW, g.canvasH);
     updateLayer(pin.id, { asset: pinAssetForColor(text.color), tint: text.color || '#ffffff', x: g.pinX, y: g.pinY, width: g.pinW, height: g.pinH }, { history: false });
@@ -127,13 +130,37 @@ function regenerateQuick() {
   } else if (mode === 'photoLocation') {
     const pin = state.layers.find((l) => l.type === 'pin');
     const text = state.layers.find((l) => l.type === 'text');
-    if (!pin || !text) return;
+    if (!pin || !text) return false;
     const corner = pin.corner || 'bottom-left';
     const scale = pin.scale || 1;
     const g = computePhotoBadgeGeometry(text.text, { corner, canvasW: state.canvas.width, canvasH: state.canvas.height, scale });
     updateLayer(pin.id, { asset: pinAssetForColor(text.color), tint: text.color || '#ffffff', corner, scale, x: g.pinX, y: g.pinY, width: g.pinW, height: g.pinH }, { history: false });
     updateLayer(text.id, { text: g.cityName, x: g.textX, y: g.textY, width: g.textW, height: g.textH, fontSize: g.fontSize, letterSpacing: g.letterSpacing }, { history: false });
   }
+  return true;
+}
+
+// Los stickers con sombra necesitan un hueco alrededor para que no se corte: el
+// lienzo crece lo justo y todo se desplaza (la geometría se recalcula desde
+// cero en cada pasada, así que no se acumula).
+const SHADOW_MARGIN_MODES = ['title', 'body', 'location', 'gallery', 'logoAjt'];
+function applyShadowMargin() {
+  const state = getState();
+  if (!SHADOW_MARGIN_MODES.includes(state.quickGenerator)) return;
+  const targets = shadowTargets(state);
+  if (!targets.length) return;
+  const { width: cw, height: ch } = state.canvas;
+  const base = Math.min(cw, ch);
+  // el tamaño de la sombra se mide sobre el sticker, no sobre el lienzo ya ampliado
+  targets.forEach((t) => { if (t.shadowBase !== base) updateLayer(t.id, { shadowBase: base }, { history: false }); });
+  const m = shadowExtent(targets[0], base);
+  if (!m) return;
+  setCanvasSize(cw + m * 2, ch + m * 2);
+  getState().layers.forEach((l) => updateLayer(l.id, { x: l.x + m, y: l.y + m }, { history: false }));
+}
+
+function regenerateQuick() {
+  if (regenerateQuickCore()) applyShadowMargin();
 }
 
 // Stickers (sin fondo) en negro corporativo: el damero oscuro del lienzo los
@@ -151,7 +178,7 @@ function updatePreviewBackground() {
   const isBlack = (visibleColor || '').toLowerCase() === brandColor('dark');
   const galleryData = state.quickGenerator === 'gallery' && image ? galleryItem(image.galleryKey, image.itemKey) : null;
   const area = document.getElementById('canvasArea');
-  area.classList.toggle('light-preview', (isSticker && isBlack) || !!(galleryData && galleryData.lightPreview));
+  area.classList.toggle('light-preview', (isSticker && isBlack) || !!(galleryData && galleryData.lightPreview) || state.quickGenerator === 'gradient');
   // el logo de AJT se ve sobre el fondo de la combinación elegida (manual de marca)
   area.style.background = state.quickGenerator === 'logoAjt' && image ? ajtColor(ajtVariant(image.ajtVariant).bg) : '';
 }
@@ -180,10 +207,21 @@ function getLayerItemKey() {
 // Archivo del sticker: el original, o recoloreado a tamaño completo si es de
 // un solo color y se ha elegido un color de marca
 async function galleryFileData(item, hex) {
-  if (item.recolor && hex) return { name: galleryColorFileName(item, hex), blob: await recolorBlob(item.src, hex, item.duotone) };
-  const res = await fetch(item.src);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return { name: galleryFileName(item), blob: await res.blob() };
+  let file;
+  if (item.recolor && hex) {
+    file = { name: galleryColorFileName(item, hex), blob: await recolorBlob(item.src, hex, item.duotone) };
+  } else {
+    const res = await fetch(item.src);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    file = { name: galleryFileName(item), blob: await res.blob() };
+  }
+  // los stickers salen con margen transparente (y la sombra, si se ha puesto);
+  // los logos y fondos, tal cual
+  if (!item.noPad) {
+    const layer = getState().layers.find((l) => l.type === 'image');
+    file.blob = await padStickerBlob(file.blob, layer);
+  }
+  return file;
 }
 
 async function downloadGalleryItem(item, hex) {
@@ -218,7 +256,8 @@ async function downloadAjtLogo(square) {
     await ensureAjtLogoAssets();
     const { canvas } = drawAjtLogo(img);
     let url = canvas.toDataURL('image/png');
-    if (square) url = await padStickerToSquare(url);
+    // con sombra, el archivo lleva siempre el hueco que ella necesita
+    if (square || img.shadowOn) url = await padStickerDataURL(url, img);
     const name = (img.ajtText || 'logo').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'logo';
     downloadBlob(dataURLToBlob(url), `ajt-${name}-${img.ajtLayout}-${img.ajtVariant}${square ? '-cuadrado' : ''}.png`);
   } catch (err) {
@@ -244,7 +283,16 @@ function refreshProps() {
       onColor: (hex) => { updateLayer(img.id, { galleryColor: hex }); refreshAll(); },
       onDownload: () => downloadGalleryItem(galleryItem(img.galleryKey, getLayerItemKey()), img.galleryColor || null),
       onDownloadAll: () => downloadGalleryAll(gallery, img.galleryColor || null),
+      shadowIds: [img.id],
+      onShadow: refreshCanvas,
+      rerender: refreshProps,
     });
+    return;
+  }
+  if (state.quickGenerator === 'gradient') {
+    const grad = state.layers.find((l) => l.type === 'gradient');
+    if (!grad) return;
+    renderGradientPanel(propsContentEl, { layer: grad, onChange: refreshCanvas, onDownload: () => document.getElementById('btnExportSingle').click() });
     return;
   }
   if (state.quickGenerator === 'compose') {
@@ -259,6 +307,9 @@ function refreshProps() {
       onChange: (patch) => { updateLayer(img.id, patch); refreshCanvas(); },
       onDownload: () => downloadAjtLogo(false),
       onDownloadSquare: () => downloadAjtLogo(true),
+      shadowIds: [img.id],
+      onShadow: refreshCanvas,
+      rerender: refreshProps,
     });
     return;
   }
@@ -595,24 +646,13 @@ function readImageScaled(file) {
 }
 
 // Instagram muestra como un recuadro BLANCO la transparencia de los PNG de
-// sticker muy alargados y ajustados al texto (pasaba igual desde Photoshop).
-// Con una caja transparente más grande alrededor sí la respeta, así que los
-// stickers se exportan centrados en un lienzo cuadrado transparente.
+// sticker muy alargados o ajustados al dibujo (pasaba igual desde Photoshop).
+// Con un margen transparente alrededor y el sticker centrado en un lienzo
+// cuadrado sí la respeta (ver lib/pad.js), así que todos los stickers se
+// exportan así.
 const STICKER_MODES = ['title', 'body', 'location', 'logoAjt'];
 function padStickerToSquare(dataURL) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onerror = reject;
-    img.onload = () => {
-      const side = Math.max(img.width, img.height);
-      const c = document.createElement('canvas');
-      c.width = side;
-      c.height = side;
-      c.getContext('2d').drawImage(img, Math.round((side - img.width) / 2), Math.round((side - img.height) / 2));
-      resolve(c.toDataURL('image/png'));
-    };
-    img.src = dataURL;
-  });
+  return padStickerDataURL(dataURL);
 }
 async function finalizeExport(dataURL) {
   return STICKER_MODES.includes(getState().quickGenerator) ? padStickerToSquare(dataURL) : dataURL;
@@ -747,7 +787,7 @@ async function init() {
     exportMenu.classList.add('hidden');
     try {
       const dataURL = await finalizeExport(await exportPNG(renderer));
-      downloadBlob(dataURLToBlob(dataURL), `story_${Date.now()}.png`);
+      downloadBlob(dataURLToBlob(dataURL), getState().quickGenerator === 'gradient' ? `degradado_9x16_${Date.now()}.png` : `story_${Date.now()}.png`);
     } catch (err) {
       console.error('Error exportando PNG', err);
       alert('No se ha podido generar el PNG. Vuelve a intentarlo.');

@@ -187,3 +187,7 @@ input[type="range"] { accent-color: var(--accent); height: 32px; }
 .home-brand { flex: 0 0 auto; border-radius: 0; border: none; background: transparent; box-shadow: none; }
 .home-brand.active { background: transparent; box-shadow: none; color: var(--text); }
 .home-back { margin-bottom: 0; }
+
+/* generador de degradados: cada punto en su caja */
+.grad-stop { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-top: 10px; background: var(--panel-light); }
+.shadow-controls { margin-top: 6px; }

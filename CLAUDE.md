@@ -39,3 +39,18 @@ fila y, si procede, el archivo del Storage).
   NULL`, "valen para todas"); el botón "Mostrar todos" en `communityPanel.js` quita ese filtro. No hay forma
   de marcar un sticker como "vale para todas" al subirlo (se decidió no complicar el formulario); si hace
   falta, se cambia a mano en Supabase poniendo `brand = NULL` en esa fila.
+
+## Sombra, degradado y margen de stickers
+
+- **Sombra difusa** (opcional, en textos, logos y stickers): `src/engine/shadow.js` (valores y capas que la
+  reciben) y `src/ui/shadowControls.js` (interruptor + opacidad/difuminado/distancia). En los stickers rápidos el
+  lienzo crece lo justo para que la sombra no se corte (`applyShadowMargin` en `main.js`; `shadowBase` mide la
+  sombra sobre el sticker, no sobre el lienzo ampliado). Las fotos de las stories no llevan sombra.
+- **Degradado de legibilidad** (negro → transparente, 9:16): plantilla «Degradado de legibilidad» en
+  Plantillas. `src/engine/gradient.js` (tramo, opacidad, lado, puntos), `src/templates/gradient.js`,
+  `src/ui/gradientPanel.js`. Descarga PNG transparente 1080×1920 (`degradado_9x16_*.png`).
+- **Margen transparente en stickers** (Instagram pintaba fondo blanco en algunos móviles, p. ej. Huelga
+  General → 11N): `src/lib/pad.js`. Todos los stickers se descargan con un 6 % de margen por lado y centrados
+  en un lienzo cuadrado (lado máximo 4000 px por el límite de canvas de iOS). Regla del usuario: todo lo que se
+  descarga con transparencia es un sticker (logos incluidos). Solo el fondo vertical, que es opaco, lleva
+  `noPad: true` en `gallery.js` y se descarga tal cual.

@@ -6,6 +6,8 @@ import { recolorThumb } from '../lib/recolor.js';
 import { submitText } from '../lib/community.js';
 import { swatches } from './swatches.js';
 import { icon } from './icons.js';
+import { shadowGroup } from './shadowControls.js';
+import { shadowTargets } from '../engine/shadow.js';
 import { AJT_LOGO_VARIANTS, AJT_LOGO_LAYOUTS, ajtColor } from '../templates/ajtLogo.js';
 import { LOGO_KINDS, logoKindOf, logoSrcFor, PIN_VARIANTS } from '../engine/stageRenderer.js';
 
@@ -104,6 +106,8 @@ export function renderQuickPanel(container, { onChange } = {}) {
   }
 
   container.appendChild(g);
+  const targets = shadowTargets(state);
+  if (targets.length) container.appendChild(shadowGroup(targets.map((l) => l.id), { onChange: () => onChange && onChange(), rerender: () => renderQuickPanel(container, { onChange }) }));
 }
 
 // Activa/desactiva el subtítulo del artículo. Desactivado: no se ve ni se
@@ -123,7 +127,7 @@ function setArticleSubtitle(enabled) {
 // Panel de una galería de stickers ya hechos: miniaturas para elegir cuál se
 // ve en el lienzo, color de marca (en los stickers de un solo color) y botones
 // para descargar (uno o todos).
-export function renderGalleryPanel(container, { gallery, currentKey, color, onSelect, onColor, onDownload, onDownloadAll }) {
+export function renderGalleryPanel(container, { gallery, currentKey, color, onSelect, onColor, onDownload, onDownloadAll, shadowIds, onShadow, rerender }) {
   container.innerHTML = '';
   const current = gallery.items.find((i) => i.key === currentKey) || gallery.items[0];
   const canRecolor = gallery.items.some((i) => i.recolor);
@@ -183,11 +187,13 @@ export function renderGalleryPanel(container, { gallery, currentKey, color, onSe
     g.appendChild(all);
   }
   container.appendChild(g);
+  // el fondo vertical (opaco) se descarga tal cual: sin margen ni sombra
+  if (shadowIds && shadowIds.length && !current.noPad) container.appendChild(shadowGroup(shadowIds, { onChange: onShadow, rerender }));
 }
 
 // Panel del logo editable de AJT: nombre de la ubicación, composición y
 // combinación de colores permitida según el fondo.
-export function renderAjtLogoPanel(container, { logo, onChange, onDownload, onDownloadSquare }) {
+export function renderAjtLogoPanel(container, { logo, onChange, onDownload, onDownloadSquare, shadowIds, onShadow, rerender }) {
   container.innerHTML = '';
   const g = document.createElement('div');
   g.className = 'prop-group';
@@ -214,7 +220,7 @@ export function renderAjtLogoPanel(container, { logo, onChange, onDownload, onDo
         e.preventDefault();
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         onChange({ [key]: o.key });
-        renderAjtLogoPanel(container, { logo: { ...logo, [key]: o.key }, onChange, onDownload, onDownloadSquare });
+        renderAjtLogoPanel(container, { logo: { ...logo, [key]: o.key }, onChange, onDownload, onDownloadSquare, shadowIds, onShadow, rerender });
       });
       wrap.appendChild(b);
     });
@@ -238,6 +244,7 @@ export function renderAjtLogoPanel(container, { logo, onChange, onDownload, onDo
   sq.addEventListener('click', onDownloadSquare);
   g.appendChild(sq);
   container.appendChild(g);
+  if (shadowIds && shadowIds.length) container.appendChild(shadowGroup(shadowIds, { onChange: onShadow, rerender }));
 }
 
 export function renderProps(container, layerId, { onChange, onRemove, onBrandChange } = {}) {
@@ -919,6 +926,15 @@ export function renderProps(container, layerId, { onChange, onRemove, onBrandCha
     g.appendChild(row('Radio esquina', rangeWithNumber(0, 200, 1, layer.cornerRadius || 0, (v) => patch({ cornerRadius: v }))));
 
     container.appendChild(g);
+  }
+
+  // sombra difusa opcional (textos, logos y, en los stickers rápidos, el sticker entero)
+  const shTargets = shadowTargets(getState(), layerId);
+  if (shTargets.length) {
+    container.appendChild(shadowGroup(shTargets.map((l) => l.id), {
+      onChange: () => onChange && onChange(),
+      rerender: () => renderProps(container, layerId, { onChange, onRemove, onBrandChange }),
+    }));
   }
 
   // posición/escala y exportación van al final: son ajustes finos, no lo

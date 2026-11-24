@@ -6,6 +6,8 @@ import { fitTextToBox } from './textFit.js';
 import { layoutRichText, fitRichText, bodyWeights } from './richText.js';
 import { ensureFontsFor } from './fonts.js';
 import { tintCanvas } from '../lib/recolor.js';
+import { shadowMetrics } from './shadow.js';
+import { gradientColorStops } from './gradient.js';
 
 const imageCache = new Map();
 function loadImage(src) {
@@ -429,13 +431,13 @@ export class StageRenderer {
   applyShadow(node, d) {
     if (d.shadowOn === undefined && !node.getAttr('_shadowed')) return;
     const { width, height } = this.canvasSize();
-    const base = Math.min(width, height);
-    const blur = ((d.shadowBlurPct ?? 35) / 100) * base * 0.05;
-    const dist = ((d.shadowDistPct ?? 20) / 100) * base * 0.03;
+    // shadowBase: en los stickers el lienzo crece para que quepa la sombra, así
+    // que el tamaño de la sombra se mide sobre el contenido, no sobre el lienzo
+    const m = shadowMetrics(d, d.shadowBase || Math.min(width, height));
     const leaves = node.getType() === 'Shape' ? [node] : node.find((n) => n.getType() === 'Shape' && n.name() !== 'placeholder' && n.name() !== 'placeholderLabel');
     leaves.forEach((leaf) => {
       if (d.shadowOn) {
-        leaf.setAttrs({ shadowEnabled: true, shadowColor: '#000000', shadowBlur: blur, shadowOpacity: d.shadowOpacity ?? 0.7, shadowOffsetX: 0, shadowOffsetY: dist });
+        leaf.setAttrs({ shadowEnabled: true, shadowColor: '#000000', shadowBlur: m.blur, shadowOpacity: m.opacity, shadowOffsetX: 0, shadowOffsetY: m.dist });
       } else {
         leaf.shadowEnabled(false);
       }
@@ -836,10 +838,9 @@ export class StageRenderer {
     this.applyGradientFill(node, d);
   }
   applyGradientFill(node, d) {
-    const c = d.color || '#282929';
     node.fillLinearGradientStartPoint({ x: 0, y: 0 });
     node.fillLinearGradientEndPoint({ x: 0, y: d.height });
-    node.fillLinearGradientColorStops([0, hexToRgba(c, 0), 1, hexToRgba(c, 0.92)]);
+    node.fillLinearGradientColorStops(gradientColorStops(d, hexToRgba));
   }
 }
 
