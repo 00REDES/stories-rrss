@@ -41,5 +41,5 @@ export const LOGO_TEMPLATES = [
 
 // Degradado negro → transparente 9:16 (PNG para dar legibilidad a lo que se pone encima)
 export const GRADIENT_TEMPLATES = [
-  { id: 'gradient_legibility', name: 'Degradado de legibilidad', builtin: true, category: 'Fotos', doc: () => buildGradientDoc() },
+  { id: 'gradient_legibility', name: 'Degradado de legibilidad', builtin: true, category: 'Fondos', doc: () => buildGradientDoc() },
 ];

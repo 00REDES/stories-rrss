@@ -25,7 +25,6 @@ const MENU = [
       { title: 'Artículo', hint: 'Plantilla fija de artículo', icon: 'article', id: 'builtin_article' },
       { title: 'Imagen + stickers', hint: 'Tu imagen con stickers y textos que mueves a mano', icon: 'compose', id: 'compose_photo' },
       { title: 'Foto con ubicación', hint: 'Tu foto con la ubicación', icon: 'photo', id: 'photo_location' },
-      { title: 'Degradado de legibilidad', hint: 'Negro a transparente 9:16, para leer mejor lo que pones encima', icon: 'layers', id: 'gradient_legibility' },
     ],
   },
   {
@@ -53,6 +52,12 @@ const MENU = [
           { title: 'Huelga General 11N', hint: '5 stickers y fondo vertical', icon: 'flag', id: 'sticker_huelga_huelga-general' },
         ],
       },
+    ],
+  },
+  {
+    title: 'Fondos', hint: 'Degradados y fondos para tus stories', icon: 'layers',
+    children: [
+      { title: 'Degradado de legibilidad', hint: 'Negro a transparente 9:16, para leer mejor lo que pones encima', icon: 'layers', id: 'gradient_legibility' },
     ],
   },
   {
