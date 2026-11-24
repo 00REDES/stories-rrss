@@ -178,7 +178,14 @@ function updatePreviewBackground() {
   const isBlack = (visibleColor || '').toLowerCase() === brandColor('dark');
   const galleryData = state.quickGenerator === 'gallery' && image ? galleryItem(image.galleryKey, image.itemKey) : null;
   const area = document.getElementById('canvasArea');
-  area.classList.toggle('light-preview', (isSticker && isBlack) || !!(galleryData && galleryData.lightPreview) || state.quickGenerator === 'gradient');
+  // con sombra (negra) el fondo oscuro la esconde: se pasa a un fondo claro si el
+  // sticker es negro, y a un gris medio si no (contrasta con blanco, rojo y turquesa
+  // y deja ver la sombra)
+  const shadowTarget = SHADOW_MARGIN_MODES.includes(state.quickGenerator) && state.quickGenerator !== 'logoAjt' ? shadowTargets(state)[0] : null;
+  const withShadow = !!(shadowTarget && shadowTarget.shadowOn);
+  const darkSticker = (isSticker && isBlack) || !!(galleryData && galleryData.lightPreview);
+  area.classList.toggle('light-preview', darkSticker || state.quickGenerator === 'gradient');
+  area.classList.toggle('shadow-preview', withShadow && !darkSticker);
   // el logo de AJT se ve sobre el fondo de la combinación elegida (manual de marca)
   area.style.background = state.quickGenerator === 'logoAjt' && image ? ajtColor(ajtVariant(image.ajtVariant).bg) : '';
 }

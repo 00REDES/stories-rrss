@@ -191,3 +191,8 @@ input[type="range"] { accent-color: var(--accent); height: 32px; }
 /* generador de degradados: cada punto en su caja */
 .grad-stop { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-top: 10px; background: var(--panel-light); }
 .shadow-controls { margin-top: 6px; }
+
+/* sombra activada en un sticker claro o de color: gris medio para que se vea la sombra */
+#canvasArea.shadow-preview {
+  background: repeating-conic-gradient(#8f8f8f 0% 25%, #828282 0% 50%) 50% / 24px 24px;
+}
